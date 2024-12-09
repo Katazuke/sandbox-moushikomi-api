@@ -897,7 +897,8 @@ def main():
 	# IPアドレステスト用URL
 	ipurl = 'http://checkip.dyndns.com/'
 	ipres = requests.get(ipurl)
-	print('IPアドレス：',ipres.text)
+	logging.info(f'IPアドレス：{ipres.text}')
+
 	# STEP 1: クエリパラメータからapplication_idとrecord_idを取得
 	application_id = request.args.get('application_id')
 	record_id = request.args.get('record_id')
