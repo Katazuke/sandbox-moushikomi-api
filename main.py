@@ -9,18 +9,18 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Salesforce sandbox接続情報
-#SF_CLIENT_ID = '3MVG96vIeT8jJWjKIhbYEse7lgOxIGPVFHjLMpe1oRUNOYQ2BO8iykQ08UKN9HZ2Z_ikNFsRV.zo.Mze_H948'
-#SF_CLIENT_SECRET = 'F142768140C5559BD971EA504CB64524AF6AE9B2EFCEFEF710228A724FCAE88A'
-#SF_USERNAME = 'dev@a-max.jp.0705test'
-#SF_PASSWORD = 'Fj3zyT4f'
-#SF_TOKEN_URL = 'https://a-max--0705test.sandbox.my.salesforce.com/services/oauth2/token'
+SF_CLIENT_ID = '3MVG96vIeT8jJWjKIhbYEse7lgOxIGPVFHjLMpe1oRUNOYQ2BO8iykQ08UKN9HZ2Z_ikNFsRV.zo.Mze_H948'
+SF_CLIENT_SECRET = 'F142768140C5559BD971EA504CB64524AF6AE9B2EFCEFEF710228A724FCAE88A'
+SF_USERNAME = 'dev@a-max.jp.0705test'
+SF_PASSWORD = 'Fj3zyT4f'
+SF_TOKEN_URL = 'https://a-max--0705test.sandbox.my.salesforce.com/services/oauth2/token'
 
 # Salesforce 本番接続情報
-SF_CLIENT_ID = '3MVG95wP8n0_BKi2wGVZKeOKujjlv5HCsywGpTnAgKudwE3m6XIhNBXKGdgiqeGVR4RnG7pUGcPPze7a4_M.V'
-SF_CLIENT_SECRET = '71214916328D9A54B45B6CCEE0D1C574ADFD1E2992239CA024FDD89F4F3D1EAF'
-SF_USERNAME = 'dev@a-max.jp'
-SF_PASSWORD = 'Fj3zyT4fu5eieRCRPP0g95Kn8x9d09bB'
-SF_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
+#SF_CLIENT_ID = '3MVG95wP8n0_BKi2wGVZKeOKujjlv5HCsywGpTnAgKudwE3m6XIhNBXKGdgiqeGVR4RnG7pUGcPPze7a4_M.V'
+#SF_CLIENT_SECRET = '71214916328D9A54B45B6CCEE0D1C574ADFD1E2992239CA024FDD89F4F3D1EAF'
+#SF_USERNAME = 'dev@a-max.jp'
+#SF_PASSWORD = 'Fj3zyT4fu5eieRCRPP0g95Kn8x9d09bB'
+#SF_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
 
 
 
@@ -319,14 +319,6 @@ APPLICATION_COLUMNS_MAPPING = [
 		("EResponsiblePersonEmail__c",None,None),
 		("BrokerCompany__c",None,None),
 		]
-
-#ENTRY_HEAD = [
-#		("ExternalId__c","guarantee_plan_id",None),
-#		("ExternalCompanyName__c","guarantee","Name"),
-#		("PlanName__c","guarantee","plan_name"),
-#		("SuretyNumber__c","judgement_result"",result_surety_number),
-#		()
-#		]
 
 FIELD_TRANSFORMATIONS = {
 	"Sex__c": {
@@ -827,15 +819,92 @@ def process_housing_agency(appjson, instance_url, headers):
 	logging.info(f"agency_data = {agency_data }")
 	return create_housing_agency(agency_data, instance_url, headers)
 
+def create_or_update_application(instance_url, headers, application_id, app_data):
+	"""
+	application_idを基にApplication__cレコードを検索し、
+	存在すれば更新、存在しなければ新規作成
+	"""
+	# app_dataからIdフィールドを除外
+	app_data = {key: value for key, value in app_data.items() if key != "Id"}
+
+	# application_idで検索
+	existing_record_id = find_application_by_id(instance_url, headers, application_id)
+	if existing_record_id:
+		# レコードが存在する場合は更新
+		update_success = update_application_record(instance_url, headers, existing_record_id, app_data)
+		if update_success:
+			logging.info(f"Updated Application__c record: {existing_record_id}")
+			return existing_record_id
+		else:
+			logging.error("Failed to update existing Application__c record.")
+			return None
+
+	# レコードが存在しない場合は新規作成
+	new_record_id = create_application_record(instance_url, headers, app_data)
+	if new_record_id:
+		logging.info(f"Created new Application__c record: {new_record_id}")
+	return new_record_id
+
+
+def create_application_record(instance_url, headers, app_data):
+	"""新しいApplication__cレコードを作成"""
+	url = f"{instance_url}/services/data/v54.0/sobjects/Application__c"
+	# app_dataからIdフィールドを除外
+	app_data = {key: value for key, value in app_data.items() if key != "Id"}
+
+	try:
+		response = requests.post(url, headers=headers, json=app_data)
+		response.raise_for_status()
+		created_record = response.json()
+		logging.info(f"Created new Application__c record: {created_record}")
+		return created_record.get("id")
+	except requests.exceptions.RequestException as e:
+		logging.error(f"Error creating new Application__c record: {e}")
+		return None
+
+def update_application_record(instance_url, headers, record_id, app_data):
+	"""既存のApplication__cレコードを更新"""
+	url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{record_id}"
+	try:
+		response = requests.patch(url, headers=headers, json=app_data)
+		response.raise_for_status()
+		logging.info(f"Updated Application__c record: {record_id}")
+		return True
+	except requests.exceptions.RequestException as e:
+		logging.error(f"Error updating Application__c record: {e}")
+		return False
+
+def find_application_by_id(instance_url, headers, application_id):
+	"""
+	application_id に一致する Application__c レコードを検索
+	"""
+	query = f"SELECT Id FROM Application__c WHERE ExternalApplicationId__c = '{application_id}'"
+	url = f"{instance_url}/services/data/v54.0/query?q={query}"
+	try:
+		response = requests.get(url, headers=headers)
+		response.raise_for_status()
+		records = response.json().get("records", [])
+		return records[0]["Id"] if records else None
+	except requests.exceptions.RequestException as e:
+		logging.error(f"Error querying Application__c: {e}")
+		return None
+
+
+
 @app.route('/')
 def main():
+	
+	# IPアドレステスト用URL
+	ipurl = 'http://checkip.dyndns.com/'
+	ipres = requests.get(ipurl)
+	print('IPアドレス：',ipres.text)
 	# STEP 1: クエリパラメータからapplication_idとrecord_idを取得
 	application_id = request.args.get('application_id')
 	record_id = request.args.get('record_id')
 
 	# application_idが指定されていない場合はエラーを返す
 	if not application_id:
-		return jsonify({"error": "'application_id' parameter is required."}), 400
+		
 	#if not recor_id:
 		#return f"Error: 'record_id' parameter is required.", 400
 
@@ -923,6 +992,15 @@ def main():
 
 
 	# 申込オブジェクトの更新
+	## record_idが無い場合、レコードを新規作成
+	if not record_id:
+		logging.info("record_id not provided, attempting to create or update Application__c.")
+		new_or_updated_record_id = create_or_update_application(instance_url, sf_headers, application_id, app_data)
+		if new_or_updated_record_id:
+			return jsonify({"message": f"Processed Application__c record: {new_or_updated_record_id}"}), 200
+		else:
+			return jsonify({"error": "Failed to process Application__c record"}), 500
+	## recod_idがある場合、該当レコードを更新
 	app_url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{record_id}"
 	app_response = requests.patch(app_url, headers=sf_headers, json=app_data)
 	if app_response.status_code != 204:
@@ -933,10 +1011,6 @@ def main():
 	return '''<script>window.close();</script>''', 200
 	
 
-	# IPアドレステスト用URL
-	#ipurl = 'http://checkip.dyndns.com/'
-	#ipres = requests.get(ipurl)
-	#print('IPアドレス：',ipres.text)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
