@@ -878,7 +878,7 @@ def find_application_by_id(instance_url, headers, application_id):
 	"""
 	application_id に一致する Application__c レコードを検索
 	"""
-	query = f"SELECT Id FROM Application__c WHERE ExternalApplicationId__c = '{application_id}'"
+	query = f"SELECT Id FROM Application__c WHERE ExternalId__c = '{application_id}'"
 	url = f"{instance_url}/services/data/v54.0/query?q={query}"
 	try:
 		response = requests.get(url, headers=headers)
