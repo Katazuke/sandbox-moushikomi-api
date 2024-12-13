@@ -905,10 +905,15 @@ def main():
 
 	# application_idが指定されていない場合はエラーを返す
 	if not application_id:
-		
-	#if not recor_id:
-		#return f"Error: 'record_id' parameter is required.", 400
+		return jsonify({"error": "'application_id' parameter is required."}), 400
 
+	#アクセストークンを取得してSFAPIのヘッダを構築
+	access_token, instance_url = get_salesforce_token()
+	sf_headers = {
+		'Authorization': f'Bearer {access_token}',
+		'Content-Type': 'application/json',
+	}
+		
 	# STEP 2: APIからデータ取得
 	# 送信先のURLを構築
 	url = f'https://moushikomi-uketsukekun.com/maintenance_company/api/v2/entry_heads/{application_id}'
@@ -927,23 +932,15 @@ def main():
 	except ValueError:
 		logging.error("Failed to parse JSON from external API response")
 		return jsonify({"error": "Invalid JSON response from external API"}), 500
-		
-	# STEP 3: 契約者情報の重複チェック
-	#アクセストークンを取得してSFAPIのヘッダを構築
-	access_token, instance_url = get_salesforce_token()
-	sf_headers = {
-		'Authorization': f'Bearer {access_token}',
-		'Content-Type': 'application/json',
-	}
 	
-	# STEP 4: 個人/法人のマッピング表を選択
+	# STEP 3: 個人/法人のマッピング表を選択
 	# 賃借人オブジェクトから個人/法人に分けて契約者のマッピング表を選択
 	renter_type = "法人" if appjson.get("corp") else "個人"
 	renter_data =  map_variables(appjson, RENTER_COLUMNS_MAPPING[renter_type]["契約者"])
 	renter_data["RenterType__c"] = renter_type
 
 
-	# STEP 5: 保証プランの紐づけ
+	# STEP 4: 保証プラン情報の処理
 	try:
 		plan_record_id = process_guarantee_plan(appjson, instance_url, sf_headers)
 		#app_data に保証プラン ID を設定
@@ -952,7 +949,7 @@ def main():
 		logging.error(f"Error processing guarantee plan: {e}")
 		raise	
 
-	# STEP6: 仲介会社情報の処理
+	# STEP 5: 仲介会社情報の処理
 	broker_data = appjson.get("broker", {})
 	try:
 		broker_record_id = process_broker_info(broker_data, instance_url, sf_headers)
@@ -961,7 +958,7 @@ def main():
 		logging.error(f"Error processing broker info: {e}")
 		raise
 
-	# STEP 7: 社宅代行会社情報の処理
+	# STEP 6: 社宅代行会社情報の処理
 	try:
 		agent_id = process_housing_agency(appjson, instance_url, sf_headers)
 		logging.info(f"Agent__c set to: {agent_id}")
@@ -969,8 +966,7 @@ def main():
 		logging.error(f"Error processing housing agency: {e}")
 		agent_id = None
 
-	# STEP 8: 申込情報の更新	
-	# 申込情報の構築
+	# STEP 7: 申込情報の構築
 	app_data = map_variables(appjson, APPLICATION_COLUMNS_MAPPING)
 	app_data["IndividualCorporation__c"]=renter_type
 	app_data["GuaranteePlan__c"]=plan_record_id
@@ -981,16 +977,18 @@ def main():
 	app_data["EResponsiblePersonEmail__c"] = broker_data.get('email')
 	app_data["Agent__c"] = agent_id
 
-	# 契約者重複チェックと重複しない場合に新規作成
+	## 契約者重複チェックと重複しない場合に新規作成
 	contractor_id = check_duplicate_record(instance_url, sf_headers, renter_data) or create_renter_record(instance_url, sf_headers, renter_data)
 	app_data["Contractor__c"]=contractor_id
 
-	# 入居者重複チェックと重複しない場合に新規作成
+	## 入居者重複チェックと重複しない場合に新規作成
 	for i in range(1, 6):  # 入居者 1〜5 をループ処理
 		tenant_key = f"入居者{i}"
 		resident_key = f"Resident{i}__c"
 		process_tenant_data(appjson, renter_type, tenant_key, instance_url, sf_headers, app_data, resident_key)	
 
+
+	# STEP 8:セールスフォースAPIへのアクセス
 
 	# 申込オブジェクトの更新
 	## record_idが無い場合、レコードを新規作成
