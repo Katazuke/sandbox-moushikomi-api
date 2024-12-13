@@ -895,9 +895,9 @@ def find_application_by_id(instance_url, headers, application_id):
 def main():
 	
 	# IPアドレステスト用URL
-	#ipurl = 'http://checkip.dyndns.com/'
-	#ipres = requests.get(ipurl)
-	#logging.info(f'IPアドレス：{ipres.text}')
+	ipurl = 'http://checkip.dyndns.com/'
+	ipres = requests.get(ipurl)
+	logging.info(f'IPアドレス：{ipres.text}')
 
 	# STEP 1: クエリパラメータからapplication_idとrecord_idを取得
 	application_id = request.args.get('application_id')
