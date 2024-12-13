@@ -859,6 +859,7 @@ def create_application_record(instance_url, headers, app_data):
 		logging.info(f"Created new Application__c record: {created_record}")
 		return created_record.get("id")
 	except requests.exceptions.RequestException as e:
+		logging.info(f"app_data={app_data}")
 		logging.error(f"Error creating new Application__c record: {e}")
 		return None
 
