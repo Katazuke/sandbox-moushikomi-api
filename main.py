@@ -256,6 +256,7 @@ APPLICATION_COLUMNS_MAPPING = [
 		("Contractor__c",None,None),
 		("Resident1__c",None,None),
 		("IndividualCorporation__c",None,None),
+		("Leasing__c",None,None),
 		("EmergencyContactSex__c", "emergency_sex", "choice"),
 		("EmergencyContactRelationship__c", "emergency_relationship", "choice"),
 		("EmergencyContactRelationship__c", "corp_emergency_relationship", "choice"),
@@ -914,6 +915,7 @@ def main():
 		'Authorization': f'Bearer {access_token}',
 		'Content-Type': 'application/json',
 	}
+	looging_info(f'ヘッダ情報：{sf_headers}')
 		
 	# STEP 2: APIからデータ取得
 	# 送信先のURLを構築
@@ -939,7 +941,10 @@ def main():
 	renter_type = "法人" if appjson.get("corp") else "個人"
 	renter_data =  map_variables(appjson, RENTER_COLUMNS_MAPPING[renter_type]["契約者"])
 	renter_data["RenterType__c"] = renter_type
-
+	
+	## 契約者重複チェックと重複しない場合に新規作成
+	contractor_id = check_duplicate_record(instance_url, sf_headers, renter_data) or create_renter_record(instance_url, sf_headers, renter_data)
+	
 
 	# STEP 4: 保証プラン情報の処理
 	try:
@@ -966,6 +971,9 @@ def main():
 	except Exception as e:
 		logging.error(f"Error processing housing agency: {e}")
 		agent_id = None
+	# STEP 99: 物件情報の処理
+	property_data = appjson.get("properties",{})
+	leasing_id = property_data['room_key']
 
 	# STEP 7: 申込情報の構築
 	app_data = map_variables(appjson, APPLICATION_COLUMNS_MAPPING)
@@ -977,9 +985,7 @@ def main():
 	app_data["ResponsiblePerson__c"] = broker_data.get('name')
 	app_data["EResponsiblePersonEmail__c"] = broker_data.get('email')
 	app_data["Agent__c"] = agent_id
-
-	## 契約者重複チェックと重複しない場合に新規作成
-	contractor_id = check_duplicate_record(instance_url, sf_headers, renter_data) or create_renter_record(instance_url, sf_headers, renter_data)
+	app_data[]
 	app_data["Contractor__c"]=contractor_id
 
 	## 入居者重複チェックと重複しない場合に新規作成
