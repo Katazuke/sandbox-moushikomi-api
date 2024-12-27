@@ -915,7 +915,7 @@ def main():
 		'Authorization': f'Bearer {access_token}',
 		'Content-Type': 'application/json',
 	}
-	looging_info(f'ヘッダ情報：{sf_headers}')
+	logging_info(f'ヘッダ情報：{sf_headers}')
 		
 	# STEP 2: APIからデータ取得
 	# 送信先のURLを構築
@@ -973,7 +973,7 @@ def main():
 		agent_id = None
 	# STEP 99: 物件情報の処理
 	property_data = appjson.get("properties",{})
-	leasing_id = property_data['room_key']
+	leasing_name = property_data.get('room_key')
 
 	# STEP 7: 申込情報の構築
 	app_data = map_variables(appjson, APPLICATION_COLUMNS_MAPPING)
@@ -985,7 +985,6 @@ def main():
 	app_data["ResponsiblePerson__c"] = broker_data.get('name')
 	app_data["EResponsiblePersonEmail__c"] = broker_data.get('email')
 	app_data["Agent__c"] = agent_id
-	app_data[]
 	app_data["Contractor__c"]=contractor_id
 
 	## 入居者重複チェックと重複しない場合に新規作成
