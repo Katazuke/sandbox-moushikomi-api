@@ -915,7 +915,7 @@ def main():
 		'Authorization': f'Bearer {access_token}',
 		'Content-Type': 'application/json',
 	}
-	logging_info(f'ヘッダ情報：{sf_headers}')
+	logging.info(f'ヘッダ情報：{sf_headers}')
 		
 	# STEP 2: APIからデータ取得
 	# 送信先のURLを構築
