@@ -820,6 +820,21 @@ def process_housing_agency(appjson, instance_url, headers):
 	logging.info(f"agency_data = {agency_data }")
 	return create_housing_agency(agency_data, instance_url, headers)
 
+def find_leasing_by_name(instance_url, headers, leasing_name):
+	"""指定されたNameを持つLeasing__cレコードを検索
+	"""
+	query = f"SELECT Id FROM Leasing__c WHERE Name = '{leasing_name}'"
+	url = f"{instance_url}/services/data/v54.0/query?q={query}"
+	try:
+		response = requests.get(url, headers=headers)
+		response.raise_for_status()
+		records = response.json().get("records", [])
+		return records[0]["Id"] if records else None
+	except requests.exceptions.RequestException as e:
+		logging.error(f"Error querying Leasing__c: {e}")
+		return None
+
+
 def create_or_update_application(instance_url, headers, application_id, app_data):
 	"""
 	application_idを基にApplication__cレコードを検索し、
@@ -992,6 +1007,8 @@ def main():
 	app_data["EResponsiblePersonEmail__c"] = broker_data.get('email')
 	app_data["Agent__c"] = agent_id
 	app_data["Contractor__c"]=contractor_id
+	app_data["Leasing__c"] = leasing_id  # LeasingレコードのIDを追加
+
 
 	## 入居者重複チェックと重複しない場合に新規作成
 	for i in range(1, 6):  # 入居者 1〜5 をループ処理
