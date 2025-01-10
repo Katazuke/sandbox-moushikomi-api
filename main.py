@@ -972,8 +972,10 @@ def main():
 		logging.error(f"Error processing housing agency: {e}")
 		agent_id = None
 	# STEP 99: 物件情報の処理
-	property_data = appjson.get("properties",{})
-	leasing_name = property_data['room_key']
+	property_data = appjson.get("properties", {})
+	leasing_name = property_data.get('room_key')
+	leasing_id = find_leasing_by_name(instance_url, sf_headers, leasing_name)
+	logging.info(f"Leasing_id : {leasing_id}")
 
 	# STEP 7: 申込情報の構築
 	app_data = map_variables(appjson, APPLICATION_COLUMNS_MAPPING)
