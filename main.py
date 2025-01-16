@@ -843,6 +843,7 @@ def create_or_update_application(instance_url, headers, app_data):
 	1. app_data のキー 'Id' の値が null でない場合、そのレコードを更新
 	2. app_data のキー 'Id' の値が null または無い場合、ExternalId__c を基にレコードを検索し、なければ新規作成
 	"""
+	logging.info(f"appdata={app_data}") 
 	# 1. app_data のキー 'Id' が null でない場合、そのレコードを更新
 	if 'Id' in app_data and app_data['Id'] is not None:
 		app_url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{app_data['Id']}"
