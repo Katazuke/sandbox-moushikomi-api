@@ -1016,10 +1016,10 @@ def main():
 	# STEP 9:セールスフォースAPIへのアクセス
 
 	new_or_updated_record_id = create_or_update_application(instance_url, sf_headers, application_id, app_data, record_id)
-		if new_or_updated_record_id:
-			return jsonify({"message": f"Processed Application__c record: {new_or_updated_record_id}"}), 200
-		else:
-			return jsonify({"error": "Failed to process Application__c record"}), 500	
+	if new_or_updated_record_id:
+		return jsonify({"message": f"Processed Application__c record: {new_or_updated_record_id}"}), 200		
+	else:
+		return jsonify({"error": "Failed to process Application__c record"}), 500	
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
