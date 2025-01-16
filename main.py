@@ -871,7 +871,7 @@ def create_or_update_application(instance_url, headers, app_data):
 				logging.info(f"ExternalId__c: '{app_data['ExternalId__c']}' で既存の申込レコードを見つけました。更新します...")
 				return update_application_record(instance_url, headers, app_data)
 			else:
-				 logging.info(f"ExternalId__c: '{app_data['ExternalId__c']}' に該当する申込レコードが見つかりませんでした。新規作成します。")
+				logging.info(f"ExternalId__c: '{app_data['ExternalId__c']}' に該当する申込レコードが見つかりませんでした。新規作成します。")
 				return create_application_record(instance_url, headers, app_data)
 		else:
 			logging.error(f"ExternalId__c: '{app_data['ExternalId__c']}' で申込レコードを検索中にエラーが発生しました。")
