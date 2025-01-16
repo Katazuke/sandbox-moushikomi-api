@@ -253,7 +253,9 @@ RENTER_COLUMNS_MAPPING = { 						# RenterType による契約者マッピング�
 	}
 
 APPLICATION_COLUMNS_MAPPING = [
+		("Id",None,None),
 		("Contractor__c",None,None),
+		("ExternalID__c",None,None),
 		("Resident1__c",None,None),
 		("IndividualCorporation__c",None,None),
 		("Leasing__c",None,None),
@@ -835,32 +837,41 @@ def find_leasing_by_name(instance_url, headers, leasing_name):
 		return None
 
 
-def create_or_update_application(instance_url, headers, application_id, app_data):
+def create_or_update_application(instance_url, headers, application_id, app_data, record_id=None):
 	"""
 	application_idを基にApplication__cレコードを検索し、
-	存在すれば更新、存在しなければ新規作成
+	1. record_idが指定されている場合、そのレコードを更新
+	2. record_idが指定されていない場合、ExternalId__cを基にレコードを検索し、なければ新規作成
 	"""
-	# app_dataからIdフィールドを除外
-	app_data = {key: value for key, value in app_data.items() if key != "Id"}
-
-	# application_idで検索
-	existing_record_id = find_application_by_id(instance_url, headers, application_id)
-	if existing_record_id:
-		# レコードが存在する場合は更新
-		update_success = update_application_record(instance_url, headers, existing_record_id, app_data)
-		if update_success:
-			logging.info(f"Updated Application__c record: {existing_record_id}")
-			return existing_record_id
+	# 1. record_idが指定されている場合、そのレコードを更新
+	if record_id:
+		app_url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{record_id}"
+		response = requests.patch(app_url, headers=headers, json=app_data)
+		
+		if response.status_code == 204:
+			logging.info(f"Updated Application__c record: {record_id}")
+			return record_id
 		else:
-			logging.error("Failed to update existing Application__c record.")
+			logging.error(f"Error updating Application__c record: {response.text}")
 			return None
 
-	# レコードが存在しない場合は新規作成
-	new_record_id = create_application_record(instance_url, headers, app_data)
-	if new_record_id:
-		logging.info(f"Created new Application__c record: {new_record_id}")
-	return new_record_id
+	# 2. record_idが指定されていない場合、ExternalId__cを基にレコードを検索
+	query = f"SELECT Id FROM Application__c WHERE ExternalId__c = '{application_id}'"
+	query_url = f"{instance_url}/services/data/v54.0/query?q={query}"
+	response = requests.get(query_url, headers=headers)
 
+	if response.status_code == 200:
+		records = response.json().get("records", [])
+		if records:
+			existing_record_id = records[0]["Id"]
+			logging.info(f"Found existing Application__c record with ExternalId__c: {application_id}, updating...")
+			return update_application_record(instance_url, headers, existing_record_id, app_data)
+		else:
+			logging.info(f"No existing Application__c record found with ExternalId__c: {application_id}, creating new record.")
+			return create_application_record(instance_url, headers, app_data)
+	else:
+		logging.error(f"Error querying for Application__c with ExternalId__c: {application_id}.")
+		return None
 
 def create_application_record(instance_url, headers, app_data):
 	"""新しいApplication__cレコードを作成"""
@@ -882,6 +893,7 @@ def create_application_record(instance_url, headers, app_data):
 def update_application_record(instance_url, headers, record_id, app_data):
 	"""既存のApplication__cレコードを更新"""
 	url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{record_id}"
+	app_data = {key: value for key, value in app_data.items() if key not in ["Id", "ExternalId__c", "Leasing__c"]}
 	try:
 		response = requests.patch(url, headers=headers, json=app_data)
 		response.raise_for_status()
@@ -890,22 +902,6 @@ def update_application_record(instance_url, headers, record_id, app_data):
 	except requests.exceptions.RequestException as e:
 		logging.error(f"Error updating Application__c record: {e}")
 		return False
-
-def find_application_by_id(instance_url, headers, application_id):
-	"""
-	application_id に一致する Application__c レコードを検索
-	"""
-	query = f"SELECT Id FROM Application__c WHERE ExternalId__c = '{application_id}'"
-	url = f"{instance_url}/services/data/v54.0/query?q={query}"
-	try:
-		response = requests.get(url, headers=headers)
-		response.raise_for_status()
-		records = response.json().get("records", [])
-		return records[0]["Id"] if records else None
-	except requests.exceptions.RequestException as e:
-		logging.error(f"Error querying Application__c: {e}")
-		return None
-
 
 
 @app.route('/')
@@ -986,7 +982,7 @@ def main():
 	except Exception as e:
 		logging.error(f"Error processing housing agency: {e}")
 		agent_id = None
-	# STEP 99: 物件情報の処理
+	# STEP 7: 物件情報の処理
 	properties = appjson.get("properties", [])
 	if properties:  # propertiesが空リストでない場合に処理を実行
 		first_property = properties[0]  # リストの最初の要素を取得
@@ -996,7 +992,7 @@ def main():
 	leasing_id = find_leasing_by_name(instance_url, sf_headers, leasing_name)
 	logging.info(f"Leasing_id : {leasing_id}")
 
-	# STEP 7: 申込情報の構築
+	# STEP 8: 申込情報の構築
 	app_data = map_variables(appjson, APPLICATION_COLUMNS_MAPPING)
 	app_data["IndividualCorporation__c"]=renter_type
 	app_data["GuaranteePlan__c"]=plan_record_id
@@ -1008,7 +1004,7 @@ def main():
 	app_data["Agent__c"] = agent_id
 	app_data["Contractor__c"]=contractor_id
 	app_data["Leasing__c"] = leasing_id  # LeasingレコードのIDを追加
-
+	app_data["External__c"] = a
 
 	## 入居者重複チェックと重複しない場合に新規作成
 	for i in range(1, 6):  # 入居者 1〜5 をループ処理
@@ -1017,28 +1013,13 @@ def main():
 		process_tenant_data(appjson, renter_type, tenant_key, instance_url, sf_headers, app_data, resident_key)	
 
 
-	# STEP 8:セールスフォースAPIへのアクセス
+	# STEP 9:セールスフォースAPIへのアクセス
 
-	# 申込オブジェクトの更新
-	## record_idが無い場合、レコードを新規作成
-	if not record_id:
-		logging.info("record_id not provided, attempting to create or update Application__c.")
-		new_or_updated_record_id = create_or_update_application(instance_url, sf_headers, application_id, app_data)
+	new_or_updated_record_id = create_or_update_application(instance_url, sf_headers, application_id, app_data, record_id)
 		if new_or_updated_record_id:
 			return jsonify({"message": f"Processed Application__c record: {new_or_updated_record_id}"}), 200
 		else:
-			return jsonify({"error": "Failed to process Application__c record"}), 500
-	## recod_idがある場合、該当レコードを更新
-	app_url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{record_id}"
-	app_response = requests.patch(app_url, headers=sf_headers, json=app_data)
-	if app_response.status_code != 204:
-		error_message = app_response.json() if app_response.content else {"error": "Unknown error"}
-		logging.error(f"Salesforce Application update error: {error_message}")
-		return jsonify({"error": error_message}), app_response.status_code
-
-	return '''<script>window.close();</script>''', 200
-	
-
+			return jsonify({"error": "Failed to process Application__c record"}), 500	
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
