@@ -508,11 +508,11 @@ def update_renter_record(instance_url, headers, record_id, renter_data):
 	try:
 		response = requests.patch(url, headers=headers, json=renter_data)
 		response.raise_for_status()  # エラーチェック
-		logging.info(f"Record updated successfully: {record_id}")
+		logging.info(f"Renter__cレコード {record_id} が正常に更新されました。")
 		return True
 	except requests.exceptions.HTTPError as e:
 		logging.error(f"HTTP Error: {e}")
-		logging.error(f"Response content: {response.text}")
+		logging.error(f"レスポンス内容: {response.text}")
 		return False
 
 def create_new_account(instance_url, headers, guarantee_name):
@@ -550,7 +550,7 @@ def process_guarantee_plan(appjson, instance_url, headers):
 	guarantee_data = appjson.get("guarantee", {})		#guaranteeエリアのデータを取得
 	# guaranteeエリアが空の場合、保証プランなしで終了
 	if not guarantee_data:
-		logging.warning("保証プランなし")
+		logging.warning("保証プランが存在しません。")
 		return None	
 	
 	#guaranteeエリアが空じゃない場合、保証プラン情報を取得
@@ -560,6 +560,7 @@ def process_guarantee_plan(appjson, instance_url, headers):
 	# 保証プランがSF上に存在するかチェック
 	plan_record_id = get_matching_plan_id(guarantee_plan_id, instance_url, headers)
 	if plan_record_id:
+		logging.info(f"既存の保証プランが見つかりました: {plan_record_id}")
 		return plan_record_id
 
 	# 保証プランがSF上にない場合は会社名を比較
@@ -569,7 +570,7 @@ def process_guarantee_plan(appjson, instance_url, headers):
 		company_id = create_new_account(instance_url, headers, guarantee_name)
 	
 	if not company_id:
-		logging.error("新しい取引先の作成に失敗しました。")
+		logging.error("新しい取引先（保証会社）の作成に失敗しました。")
 		return None
 
 	# 新しい保証プランを作成
@@ -584,10 +585,10 @@ def process_guarantee_plan(appjson, instance_url, headers):
 		response = requests.post(url, headers=headers, json=new_plan_data)
 		response.raise_for_status()
 		created_plan = response.json()
-		logging.info(f"Created new GuaranteePlan: {created_plan}")
+		logging.info(f"新しい保証プランが作成されました: {created_plan}")
 		return created_plan.get("id")
 	except requests.exceptions.RequestException as e:
-		logging.error(f"Error creating new GuaranteePlan: {e}")
+		logging.error(f"新しい保証プランの作成中にエラーが発生しました: {e}")
 		return None
 
 
@@ -657,7 +658,7 @@ def process_tenant_data(appjson, renter_type, tenant_key, instance_url, sf_heade
 
 	# LastName__c が None の場合は処理をスキップ
 	if not tenant_data.get("LastName__c"):
-		logging.info(f"Skipping {tenant_key} due to missing LastName__c")
+		logging.info(f"{tenant_key}にLastName__cがないため、処理をスキップします。")
 		return
 
 	# 重複チェックとレコード作成
@@ -665,7 +666,7 @@ def process_tenant_data(appjson, renter_type, tenant_key, instance_url, sf_heade
 
 	# app_data に反映
 	app_data[resident_key] = tenant_id
-	logging.info(f"{resident_key} processed with ID: {tenant_id}")
+	logging.info(f"{resident_key}のIDを {tenant_id} に設定しました。")
 
 def create_renter_record(instance_url, headers, renter_data):
 	"""新しい Renter__c レコードを作成し、その ID を返す"""
@@ -689,9 +690,10 @@ def find_existing_store_branch(auth_id, instance_url, headers):
 		response = requests.get(url, headers=headers)
 		response.raise_for_status()
 		records = response.json().get("records", [])
+		logging.info(f"StoreBranch__cの検索結果: {records}")
 		return records[0]["Id"] if records else None
 	except requests.exceptions.RequestException as e:
-		logging.error(f"Error querying StoreBranch__c: {e}")
+		logging.error(f"StoreBranch__cの検索中にエラーが発生しました: {e}")
 		return None
 
 def split_company_and_branch(lines):
@@ -831,9 +833,10 @@ def find_leasing_by_name(instance_url, headers, leasing_name):
 		response = requests.get(url, headers=headers)
 		response.raise_for_status()
 		records = response.json().get("records", [])
+		logging.info(f"Leasing__cの検索結果: {records}")
 		return records[0]["Id"] if records else None
 	except requests.exceptions.RequestException as e:
-		logging.error(f"Error querying Leasing__c: {e}")
+		logging.error(f"Leasing__cの検索中にエラーが発生しました: {e}")
 		return None
 
 
@@ -843,17 +846,16 @@ def create_or_update_application(instance_url, headers, app_data):
 	1. app_data のキー 'Id' の値が null でない場合、そのレコードを更新
 	2. app_data のキー 'Id' の値が null または無い場合、ExternalId__c を基にレコードを検索し、なければ新規作成
 	"""
-	logging.info(f"appdata={app_data}") 
 	# 1. app_data のキー 'Id' が null でない場合、そのレコードを更新
 	if 'Id' in app_data and app_data['Id'] is not None:
 		app_url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{app_data['Id']}"
 		response = requests.patch(app_url, headers=headers, json=app_data)
 		
 		if response.status_code == 204:
-			logging.info(f"Updated Application__c record: {app_data['Id']}")
+			logging.info(f"Application__cレコード {app_data['Id']} が正常に更新されました。")
 			return {app_data['Id']}
 		else:
-			logging.error(f"Error updating Application__c record: {response.text}")
+			logging.error(f"Application__cレコードの更新中にエラーが発生しました: {response.text}")
 			return None
 
 	# 2. app_data のキー 'Id' が null または無い場合、ExternalId__c を基にレコードを検索
@@ -866,16 +868,16 @@ def create_or_update_application(instance_url, headers, app_data):
 			records = response.json().get("records", [])
 			if records:
 				app_data['Id']= records[0]["Id"]
-				logging.info(f"Found existing Application__c record with ExternalId__c: '{app_data['ExternalId__c']}', updating...")
+				logging.info(f"ExternalId__c: '{app_data['ExternalId__c']}' で既存の申込レコードを見つけました。更新します...")
 				return update_application_record(instance_url, headers, app_data)
 			else:
-				logging.info(f"No existing Application__c record found with ExternalId__c: '{app_data['ExternalId__c']}', creating new record.")
+				 logging.info(f"ExternalId__c: '{app_data['ExternalId__c']}' に該当する申込レコードが見つかりませんでした。新規作成します。")
 				return create_application_record(instance_url, headers, app_data)
 		else:
-			logging.error(f"Error querying for Application__c with ExternalId__c: {app_data['ExternalId__c']}.")
+			logging.error(f"ExternalId__c: '{app_data['ExternalId__c']}' で申込レコードを検索中にエラーが発生しました。")
 			return None
 	else:	
-		logging.error("Neither 'Id' nor 'ExternalId__c' found in app_data.")
+		logging.error("'Id' も 'ExternalId__c' もapp_dataに見つかりません。")
 		return None
 
 def create_application_record(instance_url, headers, app_data):
