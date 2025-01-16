@@ -859,19 +859,22 @@ def create_or_update_application(instance_url, headers, app_data):
 	elif 'ExternalId__c' in app_data:
 		query = f"SELECT Id FROM Application__c WHERE ExternalId__c = '{app_data['ExternalId__c']}'"
 		query_url = f"{instance_url}/services/data/v54.0/query?q={query}"
-	response = requests.get(query_url, headers=headers)
+		response = requests.get(query_url, headers=headers)
 
-	if response.status_code == 200:
-		records = response.json().get("records", [])
-		if records:
-			app_data['Id']= records[0]["Id"]
-			logging.info(f"Found existing Application__c record with ExternalId__c: '{app_data['ExternalId__c']}', updating...")
-			return update_application_record(instance_url, headers, existing_record_id, app_data)
+		if response.status_code == 200:
+			records = response.json().get("records", [])
+			if records:
+				app_data['Id']= records[0]["Id"]
+				logging.info(f"Found existing Application__c record with ExternalId__c: '{app_data['ExternalId__c']}', updating...")
+				return update_application_record(instance_url, headers, existing_record_id, app_data)
+			else:
+				logging.info(f"No existing Application__c record found with ExternalId__c: '{app_data['ExternalId__c']}', creating new record.")
+				return create_application_record(instance_url, headers, app_data)
 		else:
-			logging.info(f"No existing Application__c record found with ExternalId__c: '{app_data['ExternalId__c']}', creating new record.")
-			return create_application_record(instance_url, headers, app_data)
-	else:
-		logging.error(f"Error querying for Application__c with ExternalId__c: {application_id}.")
+			logging.error(f"Error querying for Application__c with ExternalId__c: {app_data['ExternalId__c']}.")
+			return None
+	else:	
+		logging.error("Neither 'Id' nor 'ExternalId__c' found in app_data.")
 		return None
 
 def create_application_record(instance_url, headers, app_data):
