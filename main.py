@@ -1012,7 +1012,7 @@ def main():
 	app_data["Agent__c"] = agent_id
 	app_data["Contractor__c"]=contractor_id
 	app_data["Leasing__c"] = leasing_id  # LeasingレコードのIDを追加
-	app_data["External__c"] = application_id
+	app_data["ExternalId__c"] = application_id
 
 	## 入居者重複チェックと重複しない場合に新規作成
 	for i in range(1, 6):  # 入居者 1〜5 をループ処理
