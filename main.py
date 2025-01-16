@@ -867,7 +867,7 @@ def create_or_update_application(instance_url, headers, app_data):
 			if records:
 				app_data['Id']= records[0]["Id"]
 				logging.info(f"Found existing Application__c record with ExternalId__c: '{app_data['ExternalId__c']}', updating...")
-				return update_application_record(instance_url, headers, existing_record_id, app_data)
+				return update_application_record(instance_url, headers, app_data)
 			else:
 				logging.info(f"No existing Application__c record found with ExternalId__c: '{app_data['ExternalId__c']}', creating new record.")
 				return create_application_record(instance_url, headers, app_data)
