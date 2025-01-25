@@ -9,18 +9,18 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Salesforce sandbox接続情報
-SF_CLIENT_ID = '3MVG96vIeT8jJWjKIhbYEse7lgOxIGPVFHjLMpe1oRUNOYQ2BO8iykQ08UKN9HZ2Z_ikNFsRV.zo.Mze_H948'
-SF_CLIENT_SECRET = 'F142768140C5559BD971EA504CB64524AF6AE9B2EFCEFEF710228A724FCAE88A'
-SF_USERNAME = 'dev@a-max.jp.0705test'
-SF_PASSWORD = 'Fj3zyT4f'
-SF_TOKEN_URL = 'https://a-max--0705test.sandbox.my.salesforce.com/services/oauth2/token'
+#SF_CLIENT_ID = '3MVG96vIeT8jJWjKIhbYEse7lgOxIGPVFHjLMpe1oRUNOYQ2BO8iykQ08UKN9HZ2Z_ikNFsRV.zo.Mze_H948'
+#SF_CLIENT_SECRET = 'F142768140C5559BD971EA504CB64524AF6AE9B2EFCEFEF710228A724FCAE88A'
+#SF_USERNAME = 'dev@a-max.jp.0705test'
+#SF_PASSWORD = 'Fj3zyT4f'
+#SF_TOKEN_URL = 'https://a-max--0705test.sandbox.my.salesforce.com/services/oauth2/token'
 
 # Salesforce 本番接続情報
-#SF_CLIENT_ID = '3MVG95wP8n0_BKi2wGVZKeOKujjlv5HCsywGpTnAgKudwE3m6XIhNBXKGdgiqeGVR4RnG7pUGcPPze7a4_M.V'
-#SF_CLIENT_SECRET = '71214916328D9A54B45B6CCEE0D1C574ADFD1E2992239CA024FDD89F4F3D1EAF'
-#SF_USERNAME = 'dev@a-max.jp'
-#SF_PASSWORD = 'Fj3zyT4fu5eieRCRPP0g95Kn8x9d09bB'
-#SF_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
+SF_CLIENT_ID = '3MVG95wP8n0_BKi2wGVZKeOKujjlv5HCsywGpTnAgKudwE3m6XIhNBXKGdgiqeGVR4RnG7pUGcPPze7a4_M.V'
+SF_CLIENT_SECRET = '71214916328D9A54B45B6CCEE0D1C574ADFD1E2992239CA024FDD89F4F3D1EAF'
+SF_USERNAME = 'dev@a-max.jp'
+SF_PASSWORD = 'Fj3zyT4fu5eieRCRPP0g95Kn8x9d09bB'
+SF_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
 
 
 
@@ -437,7 +437,7 @@ def apply_format(key, value):
 		"Birthday__c": "date",
 		"PostCode__c": "postal_code",
 		"ApplicationDate__c": "date",
-		"ExternalUpdatedDate__c": "data",
+		"ExternalUpdatedDate__c": "date",
 		"Email__c": "email",  # メールアドレスフォーマット
 		"CompanyContactMail__c": "email",  # メールアドレスフォーマット
 	}
@@ -848,15 +848,15 @@ def create_or_update_application(instance_url, headers, app_data):
 	"""
 	# 1. app_data のキー 'Id' が null でない場合、そのレコードを更新
 	if 'Id' in app_data and app_data['Id'] is not None:
-		app_url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{app_data['Id']}"
-		response = requests.patch(app_url, headers=headers, json=app_data)
-		
-		if response.status_code == 204:
-			logging.info(f"Application__cレコード {app_data['Id']} が正常に更新されました。")
-			return {app_data['Id']}
-		else:
-			logging.error(f"Application__cレコードの更新中にエラーが発生しました: {response.text}")
-			return None
+#		app_url = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{app_data['Id']}"
+#		response = requests.patch(app_url, headers=headers, json=app_data)
+#		
+#		if response.status_code == 204:
+#			logging.info(f"Application__cレコード {app_data['Id']} が正常に更新されました。")
+		return update_application_record(instance_url, headers, app_data)
+#		else:
+#			logging.error(f"Application__cレコードの更新中にエラーが発生しました: {response.text}")
+#			return None
 
 	# 2. app_data のキー 'Id' が null または無い場合、ExternalId__c を基にレコードを検索
 	elif 'ExternalId__c' in app_data:
@@ -902,12 +902,11 @@ def update_application_record(instance_url, headers, app_data):
 	id_to_updata = app_data['Id']
 	url_to_updata = f"{instance_url}/services/data/v54.0/sobjects/Application__c/{id_to_updata}"
 	app_data_to_updata = {key: value for key, value in app_data.items() if key not in ["Id", "ExternalId__c", "Leasing__c"]}
-	logging.info(f"url_to_updata={url_to_updata}")
 	try:
 		response = requests.patch(url_to_updata, headers=headers, json=app_data_to_updata)
 		response.raise_for_status()
 		logging.info(f"Updated Application__c record: {app_data['Id']}")
-		return True
+		return {app_data['Id']}
 	except requests.exceptions.RequestException as e:
 		logging.error(f"Error updating Application__c record: {e}")
 		return False
