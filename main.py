@@ -906,7 +906,7 @@ def update_application_record(instance_url, headers, app_data):
 		response = requests.patch(url_to_updata, headers=headers, json=app_data_to_updata)
 		response.raise_for_status()
 		logging.info(f"Updated Application__c record: {app_data['Id']}")
-		return {app_data['Id']}
+		return app_data['Id']
 	except requests.exceptions.RequestException as e:
 		logging.error(f"Error updating Application__c record: {e}")
 		return False
