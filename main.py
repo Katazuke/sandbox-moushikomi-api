@@ -1026,7 +1026,7 @@ def main():
 
 	new_or_updated_record_id = create_or_update_application(instance_url, sf_headers, app_data)
 	if new_or_updated_record_id:
-		return jsonify({"message": f"Processed Application__c record: {new_or_updated_record_id}"}), 200		
+		return make_response(new_or_updated_record_id, 200)  # 文字列として返す		
 	else:
 		return jsonify({"error": "Failed to process Application__c record"}), 500	
 
