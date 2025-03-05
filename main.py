@@ -526,6 +526,7 @@ def update_renter_record(instance_url, headers, record_id, renter_data):
 	except requests.exceptions.HTTPError as e:
 		logging.error(f"HTTP Error: {e}")
 		logging.error(f"レスポンス内容: {response.text}")
+		logging.error(f'Rental data: {json.dumps(renter_data, indent=2, ensure_ascii=False)}')  # renter_dataをJSON形式で出力
 		return False
 
 def create_new_account(instance_url, headers, guarantee_name):
@@ -693,6 +694,7 @@ def create_renter_record(instance_url, headers, renter_data):
 	except requests.exceptions.HTTPError as e:
 		logging.error(f"HTTP Error: {e}")
 		logging.error(f"Response content: {response.text}")
+		logging.error(f'Rental data: {json.dumps(renter_data, indent=2, ensure_ascii=False)}')  # renter_dataをJSON形式で出力
 		raise  # エラーを呼び出し元に伝える
 
 def find_existing_store_branch(auth_id, instance_url, headers):
