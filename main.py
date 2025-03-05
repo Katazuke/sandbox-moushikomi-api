@@ -479,7 +479,15 @@ def map_variables(data, columns):
 		# entry_bodies 内の特定フィールドを取得
 			for entry_body in data.get("entry_bodies", []):
 				if entry_body.get("name") == entry_name:
-					value = entry_body.get(field_name, "")
+					# ここで address2__c として海外用住所を扱うかどうか判定する
+					if entry_name == "applicant_address":
+					# overseas が True の場合は overseas_address を、それ以外は street を使う
+						if entry_body.get("overseas") is True:
+							value = entry_body.get("overseas_address", "")
+						else:
+							value = entry_body.get("street", "")
+					else:
+						value = entry_body.get(field_name, "")
 					break
 		# 改行コードのチェック
 		if value and isinstance(value, str) and ('\n' in value or '\r' in value):
@@ -894,6 +902,7 @@ def create_application_record(instance_url, headers, app_data):
 		return created_record.get("id")
 	except requests.exceptions.RequestException as e:
 		logging.info(f"app_data={app_data}")
+		logging.info(f"app_data_to_create={app_data_to_create}")
 		logging.error(f"Error creating new Application__c record: {e}")
 		return None
 
@@ -1026,7 +1035,7 @@ def main():
 
 	new_or_updated_record_id = create_or_update_application(instance_url, sf_headers, app_data)
 	if new_or_updated_record_id:
-		return jsonify({"recordId": new_or_updated_record_id}), 200  # JSONで返す	
+		return '''<script>window.close();</script>''', 200	
 	else:
 		return jsonify({"error": "Failed to process Application__c record"}), 500	
 
