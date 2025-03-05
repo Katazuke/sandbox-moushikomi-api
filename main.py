@@ -481,13 +481,12 @@ def map_variables(data, columns):
 				if entry_body.get("name") == entry_name:
 					if entry_name == "applicant_address":
 						is_overseas = entry_body.get('overseas', False)
-						if is_overseas:
+						if is_overseas :
 							# overseas が True の場合、海外住所のみ使用
 							if key == 'Address2__c':  # 海外住所を Address2__c にセット
 								value = entry_body.get('overseas_address', '')
 							else:
 								value = None  # 他の住所関連キーは無視
-							value = entry_body.get("street", "")
 						else:
 							# 通常の住所マッピング
 							value = entry_body.get(field_name, '')
