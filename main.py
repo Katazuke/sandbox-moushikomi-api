@@ -439,8 +439,6 @@ def apply_format(key, value):
 		"CompanyAddress_PostalCode__c": "postal_code",
 		"Birthday__c": "date",
 		"PostCode__c": "postal_code",
-		"ApplicationDate__c": "date_time",
-		"ExternalUpdatedDate__c": "date_time",
 		"Email__c": "email",  # メールアドレスフォーマット
 		"CompanyContactMail__c": "email",  # メールアドレスフォーマット
 	}
@@ -469,7 +467,7 @@ def parse_iso_datetime(dt_str: str) -> str:
 		return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 	except Exception as e:
 		logging.error(f"Failed to parse datetime: {dt_str} -> {e}")
-		return dt_str
+		return None
 
 def transform_value(key, value):
 	"""フィールドごとの変換を適用する汎用関数"""
