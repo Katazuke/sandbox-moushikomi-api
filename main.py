@@ -4,6 +4,8 @@ import logging
 from datetime import datetime,timezone
 import re
 import sys
+from dateutil import parser
+import pytz
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -459,18 +461,15 @@ def parse_iso_datetime(dt_str: str) -> str:
 	ISO 8601形式の文字列(例: 2025-03-04T14:11:45.000+09:00)を、Salesforceに送れる形に整形する
 	"""
 	try:
-		# Python3.7+ の fromisoformatはタイムゾーンまでパース可
-		dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00")) 
-		# Salesforceにそのまま+09:00付きで送るなら以下でOK（ローカル時刻のまま登録）
-		# return dt.isoformat(timespec="milliseconds")
-
-		# もしUTC(〜Z表記) で渡したければ
-		dt_utc = dt.astimezone(datetime.timezone.utc)
-		return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"  # ミリ秒まで付けるならこうする
-
+		# ISO8601全般をパース可能
+		dt_local = parser.isoparse(dt_str)  
+		# pytz.utc でUTCへ変換
+		dt_utc = dt_local.astimezone(pytz.utc)
+		# Z表記(ミリ秒まで含む)で返す: 2025-03-04T05:11:45.123Z
+		return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 	except Exception as e:
 		logging.error(f"Failed to parse datetime: {dt_str} -> {e}")
-		return None
+		return dt_str
 
 def transform_value(key, value):
 	"""フィールドごとの変換を適用する汎用関数"""
