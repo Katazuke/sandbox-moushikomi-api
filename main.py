@@ -3,7 +3,7 @@ from flask import Flask,request,jsonify,json,make_response,redirect, url_for
 import logging
 from datetime import datetime,timezone
 import re
-
+import sys
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -947,7 +947,7 @@ def update_application_record(instance_url, headers, app_data):
 
 @app.route('/')
 def main():
-	
+	logging.info(f"Running Python version: {sys.version}")
 	# IPアドレステスト用URL
 	#ipurl = 'http://checkip.dyndns.com/'
 	#ipres = requests.get(ipurl)
