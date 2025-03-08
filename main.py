@@ -426,6 +426,7 @@ def apply_format(key, value):
 	format_rules = {
 		"postal_code": lambda x: x.replace("-", "").strip() if len(x.replace("-", "").strip()) == 7 and x.replace("-", "").isdigit()else None,
 		"date": lambda x: datetime.fromisoformat(x.split(".")[0]).strftime("%Y-%m-%d") if x else None,
+		"datetime": lambda x: parse_iso_datetime(x),
 		"email": lambda x: x if "@" in x else "no-match@a-max.jp",  # メールアドレスバリデーション
 		# 他のフォーマットルールを追加可能
 	}
@@ -436,8 +437,8 @@ def apply_format(key, value):
 		"CompanyAddress_PostalCode__c": "postal_code",
 		"Birthday__c": "date",
 		"PostCode__c": "postal_code",
-		"ApplicationDate__c": "date",
-		"ExternalUpdatedDate__c": "date",
+		"ApplicationDate__c": "datetime",
+		"ExternalUpdatedDate__c": "datetime",
 		"Email__c": "email",  # メールアドレスフォーマット
 		"CompanyContactMail__c": "email",  # メールアドレスフォーマット
 	}
@@ -453,6 +454,23 @@ def apply_format(key, value):
 
 	# 該当なしの場合はそのまま返す
 	return value
+def parse_iso_datetime(dt_str: str) -> str:
+	"""
+	ISO 8601形式の文字列(例: 2025-03-04T14:11:45.000+09:00)を、Salesforceに送れる形に整形する
+	"""
+	try:
+		# Python3.7+ の fromisoformatはタイムゾーンまでパース可
+		dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00")) 
+		# Salesforceにそのまま+09:00付きで送るなら以下でOK（ローカル時刻のまま登録）
+		# return dt.isoformat(timespec="milliseconds")
+
+		# もしUTC(〜Z表記) で渡したければ
+		dt_utc = dt.astimezone(datetime.timezone.utc)
+		return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"  # ミリ秒まで付けるならこうする
+
+	except Exception as e:
+		logging.error(f"Failed to parse datetime: {dt_str} -> {e}")
+		return None
 
 def transform_value(key, value):
 	"""フィールドごとの変換を適用する汎用関数"""
