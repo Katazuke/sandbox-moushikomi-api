@@ -4,8 +4,6 @@ import logging
 from datetime import datetime,timezone
 import re
 import sys
-from dateutil import parser
-import pytz
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
