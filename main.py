@@ -426,7 +426,6 @@ def apply_format(key, value):
 	format_rules = {
 		"postal_code": lambda x: x.replace("-", "").strip() if len(x.replace("-", "").strip()) == 7 and x.replace("-", "").isdigit()else None,
 		"date": lambda x: datetime.fromisoformat(x.split(".")[0]).strftime("%Y-%m-%d") if x else None,
-		"date_time": lambda x: parse_iso_datetime(x),
 		"email": lambda x: x if "@" in x else "no-match@a-max.jp",  # メールアドレスバリデーション
 		# 他のフォーマットルールを追加可能
 	}
@@ -452,20 +451,6 @@ def apply_format(key, value):
 
 	# 該当なしの場合はそのまま返す
 	return value
-def parse_iso_datetime(dt_str: str) -> str:
-	"""
-	ISO 8601形式の文字列(例: 2025-03-04T14:11:45.000+09:00)を、Salesforceに送れる形に整形する
-	"""
-	try:
-		# ISO8601全般をパース可能
-		dt_local = parser.isoparse(dt_str)  
-		# pytz.utc でUTCへ変換
-		dt_utc = dt_local.astimezone(pytz.utc)
-		# Z表記(ミリ秒まで含む)で返す: 2025-03-04T05:11:45.123Z
-		return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-	except Exception as e:
-		logging.error(f"Failed to parse datetime: {dt_str} -> {e}")
-		return None
 
 def transform_value(key, value):
 	"""フィールドごとの変換を適用する汎用関数"""
